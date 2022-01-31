@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import { SideBar } from './components/SideBar';
 import { Content } from './components/Content';
@@ -33,22 +33,29 @@ export function App() {
   const [genres, setGenres] = useState<GenreResponseProps[]>([]);
 
   const [movies, setMovies] = useState<MovieProps[]>([]);
-  const [selectedGenre, setSelectedGenre] = useState<GenreResponseProps>({} as GenreResponseProps);
+  const [selectedGenre, setSelectedGenre] = useState<GenreResponseProps>(
+    {} as GenreResponseProps
+  );
 
-  useEffect(() => {
-    api.get<GenreResponseProps[]>('genres').then(response => {
-      setGenres(response.data);
-    });
+  const fetchGenres = useCallback(async () => {
+    const response = await api.get('genres');
+    setGenres(response.data);
   }, []);
 
   useEffect(() => {
-    api.get<MovieProps[]>(`movies/?Genre_id=${selectedGenreId}`).then(response => {
-      setMovies(response.data);
-    });
+    fetchGenres();
+  }, []);
 
-    api.get<GenreResponseProps>(`genres/${selectedGenreId}`).then(response => {
-      setSelectedGenre(response.data);
-    })
+  const fetchBySelectedGenre = useCallback(async () => {
+    const responseMovie = await api.get(`movies/?Genre_id=${selectedGenreId}`);
+    const responseSelectedGenre = await api.get(`genres/${selectedGenreId}`);
+
+    setMovies(responseMovie.data);
+    setSelectedGenre(responseSelectedGenre.data);
+  }, []);
+
+  useEffect(() => {
+    fetchBySelectedGenre();
   }, [selectedGenreId]);
 
   function handleClickButton(id: number) {
@@ -63,10 +70,7 @@ export function App() {
         buttonClickCallback={handleClickButton}
       />
 
-      <Content
-        selectedGenre={selectedGenre}
-        movies={movies}
-      />
+      <Content selectedGenre={selectedGenre} movies={movies} />
     </div>
-  )
+  );
 }
